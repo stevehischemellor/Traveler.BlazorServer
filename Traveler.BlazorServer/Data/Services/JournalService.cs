@@ -2,17 +2,16 @@
 using System.Text;
 using Traveler.BlazorServer.Data.Models;
 using Polly;
-using Polly.Timeout;
 
 namespace Traveler.BlazorServer.Data.Services
 {
-    public class JournalService
+    public class JournalService : IJournalService
     {
         private readonly IHttpClientFactory _clientFactory;
         private readonly ILogger<JournalService> _logger;
 
-        public JournalService(IHttpClientFactory httpClientFactory, ILogger<JournalService> logger) 
-        { 
+        public JournalService(IHttpClientFactory httpClientFactory, ILogger<JournalService> logger)
+        {
             _clientFactory = httpClientFactory;
             _logger = logger;
         }
@@ -21,7 +20,7 @@ namespace Traveler.BlazorServer.Data.Services
         {
             CancellationToken.None.ThrowIfCancellationRequested();
 
-            try 
+            try
             {
                 var url = "";
                 var client = _clientFactory.CreateClient();
@@ -38,7 +37,7 @@ namespace Traveler.BlazorServer.Data.Services
                 var journals = await JsonSerializer.DeserializeAsync<List<Journal>>(responseStream);
                 return journals != null ? journals : new List<Journal>();
             }
-            catch (Exception ex) 
+            catch (Exception ex)
             {
                 _logger.LogError(ex, ex.Message);
                 throw;
