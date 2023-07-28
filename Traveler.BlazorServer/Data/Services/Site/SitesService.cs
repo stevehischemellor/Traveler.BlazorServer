@@ -1,5 +1,7 @@
 ﻿using Microsoft.Extensions.Options;
 using Polly;
+using Polly.CircuitBreaker;
+using System.Net;
 using System.Text.Json;
 using Traveler.BlazorServer.Data.Models;
 
@@ -23,12 +25,29 @@ namespace Traveler.BlazorServer.Data.Services
             if (cancellationToken.IsCancellationRequested) { }
             try
             {
-                var url = string.Format("{0}{1}", _configuration.ApiBaseUrl, "parks");
-                var request = new HttpRequestMessage(HttpMethod.Get, url);
-                request.Headers.Add("x-api-key", _configuration.ApiKey);
-                var response = await _httpClient.SendAsync(request, cancellationToken);
+                var pollyContext = new Context("Retry 500");
+                var policy = Policy
+                    .Handle<HttpRequestException>(ex => ex.StatusCode == HttpStatusCode.InternalServerError)
+                    .WaitAndRetryAsync(
+                        5,
+                        _ => TimeSpan.FromMilliseconds(500),
+                        (result, timespan, retryNo, context) =>
+                        {
+                            _logger.LogInformation($"{context.OperationKey}: Retry number {retryNo} within " +
+                                $"{timespan.TotalMilliseconds}ms.");
+                        }
+                    );
+
+                var response = await policy.ExecuteAsync(async ctx =>
+                {
+                    var url = string.Format("{0}{1}", _configuration.ApiBaseUrl, "parks");
+                    var request = new HttpRequestMessage(HttpMethod.Get, url);
+                    request.Headers.Add("x-api-key", _configuration.ApiKey);
+                    var response = await _httpClient.SendAsync(request, cancellationToken);
+                    response.EnsureSuccessStatusCode();
+                    return response;
+                }, pollyContext);
                 
-                response.EnsureSuccessStatusCode();
                 var stm = await response.Content.ReadAsStreamAsync();
                 var npsResponse = await JsonSerializer.DeserializeAsync<NpsResponse<List<Site>>>(stm);
                 return npsResponse.Data == null ? new List<Site>() : npsResponse.Data;
