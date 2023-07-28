@@ -23,15 +23,15 @@ namespace Traveler.BlazorServer.Data.Services
             if (cancellationToken.IsCancellationRequested) { }
             try
             {
-                var url = string.Format(_configuration.ApiBaseUrl, "");
+                var url = string.Format("{0}{1}", _configuration.ApiBaseUrl, "parks");
                 var request = new HttpRequestMessage(HttpMethod.Get, url);
                 request.Headers.Add("x-api-key", _configuration.ApiKey);
                 var response = await _httpClient.SendAsync(request, cancellationToken);
                 
                 response.EnsureSuccessStatusCode();
                 var stm = await response.Content.ReadAsStreamAsync();
-                var sites = await JsonSerializer.DeserializeAsync<List<Site>>(stm);
-                return sites == null ? new List<Site>() : sites;
+                var npsResponse = await JsonSerializer.DeserializeAsync<NpsResponse<List<Site>>>(stm);
+                return npsResponse.Data == null ? new List<Site>() : npsResponse.Data;
 
             }
             catch (Exception ex)
@@ -52,8 +52,8 @@ namespace Traveler.BlazorServer.Data.Services
                 var response = await _httpClient.SendAsync(request, cancellationToken);                 
                 response.EnsureSuccessStatusCode();
                 var stm = await response.Content.ReadAsStreamAsync();
-                var site = await JsonSerializer.DeserializeAsync<Site>(stm);
-                return site;
+                var npsResponse = await JsonSerializer.DeserializeAsync<NpsResponse<Site>>(stm);
+                return npsResponse.Data;
 
             }
             catch (Exception ex)

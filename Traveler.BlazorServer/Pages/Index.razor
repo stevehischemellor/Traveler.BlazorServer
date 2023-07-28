@@ -2,8 +2,54 @@
 
 <PageTitle>Home</PageTitle>
 
-<h1>This will eventually provide the user interface for the data managed by the Traveler web api</h1>
 
+@using Traveler.BlazorServer.Data.Models;
+@using Traveler.BlazorServer.Data.Services;
+
+@inject ISitesService sitesService
+
+<h1>National Parks</h1>
+
+@if (sites == null)
+{
+    <p><em>Loading...</em></p>
+}
+else
+{
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>Park Code</th>
+                <th>Latitude</th>
+                <th>Longitude</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var site in sites)
+            {
+                <tr>
+                    <td>@site.Name</td>
+                    <td>@site.ParkCode</td>
+                    <td>@site.Latitude</td>
+                    <td>@site.Longitude</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+
+    <Counter/>
+}
+
+@code {
+    private List<Site>? sites;
+    private CancellationTokenSource _cts = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        sites = await sitesService.GetSitesAsync(_cts.Token);
+    }
+}
 
 
 
